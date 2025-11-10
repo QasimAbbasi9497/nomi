@@ -9,6 +9,7 @@ import subprocess
 import shutil
 import asyncio
 import pyshark
+import platform
 
 app = Flask(__name__)
 
@@ -72,6 +73,18 @@ def choose_interface(prefer=('WiFi', 'Wireless')):
     return non_loop[0] if non_loop else devices[0]
 
 def get_interface():
+    # On Linux, prefer special 'any' device to capture across all interfaces
+    try:
+        if platform.system().lower() == "linux":
+            out = subprocess.check_output(['tshark', '-D'], text=True, stderr=subprocess.STDOUT)
+            if any(line.strip().endswith(" (Pseudo-device that captures on all interfaces)") or
+                   line.strip().split('. ', 1)[-1].startswith("any")
+                   for line in out.splitlines() if line.strip()):
+                print("[INFO] Using 'any' interface on Linux")
+                return "any"
+    except Exception as e:
+        print(f"[WARN] Could not check for 'any' interface: {e}")
+
     devices = list_tshark_interfaces_with_name()
     for dev, name in devices:
         if "loopback" in name.lower():
@@ -84,8 +97,8 @@ def get_interface():
     if devices:
         print(f"[INFO] Using fallback interface: {devices[0][0]} ({devices[0][1]})")
         return devices[0][0]
-    print("[INFO] No interface found, defaulting to WiFi string")
-    return "WiFi"
+    print("[WARN] No capture interface found via tshark -D; live capture will not start.")
+    return None
 
 # ---------------- PACKET → ROW ---------------- #
 def _packet_to_row(pkt):
@@ -221,6 +234,8 @@ def live_traffic_worker(interface):
     capture = pyshark.LiveCapture(interface=interface, display_filter="icmpv6")
     capture.sniff(timeout=0.1)
     batch = []
+    last_flush_time = time.time()
+    flush_interval_seconds = 1.0
     try:
         for packet in capture.sniff_continuously():
             if _stop_capture:
@@ -229,12 +244,16 @@ def live_traffic_worker(interface):
             row = _packet_to_row(packet)
             if row:
                 batch.append(row)
-            if len(batch) >= 10:
+            now = time.time()
+            if len(batch) >= 10 or (now - last_flush_time) >= flush_interval_seconds:
                 _predict_and_store(batch)
                 batch = []
+                last_flush_time = now
     except Exception as e:
         print(f"⚠️ Capture error: {e}")
     finally:
+        if batch:
+            _predict_and_store(batch)
         capture.close()
         print("✅ Capture closed, ready for restart.")
 
@@ -281,9 +300,19 @@ def live_data():
     print(f"[DEBUG] Returning {len(live_buffer)} records from live_buffer")
     if live_buffer:
         return jsonify(live_buffer[-1000000:])
+    # Always return valid JSON to avoid client 'Failed to fetch' on empty buffer
+    return jsonify([])
 
 # ---------------- MAIN ---------------- #
 if __name__ == '__main__':
-    iface = get_interface()
-    threading.Thread(target=live_traffic_worker, args=(iface,), daemon=True).start()
+    iface_env = os.environ.get("CAPTURE_INTERFACE")
+    if iface_env:
+        print(f"[INFO] Using interface from CAPTURE_INTERFACE={iface_env}")
+        iface = iface_env
+    else:
+        iface = get_interface()
+    if iface is not None:
+        threading.Thread(target=live_traffic_worker, args=(iface,), daemon=True).start()
+    else:
+        print("⚠️ Live monitoring disabled: no valid interface. Ensure tshark is installed and you have permissions.")
     app.run(debug=True)
