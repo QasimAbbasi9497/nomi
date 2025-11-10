@@ -1,4 +1,4 @@
-# Nomiburgger GUI
+# DDOS Attack Detection GUI
 
 Live ICMPv6 monitoring and anomaly detection dashboard backed by a Gradient Boosting classifier. The app lets you upload CSV captures for offline analysis or start a live feed that classifies packets in real time.
 
