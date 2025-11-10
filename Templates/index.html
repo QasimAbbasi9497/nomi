@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title></title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary: #0d6efd;
+      --success: #198754;
+      --danger: #dc3545;
+      --warning: #ffc107;
+      --info: #0dcaf0;
+      --dark: #212529;
+      --light: #f8f9fa;
+    }
+    
+    body {
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f7fb;
+      color: #333;
+    }
+    
+    .navbar {
+      background: linear-gradient(90deg, #0d6efd 0%, #0dcaf0 100%);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .dashboard-header {
+      background-color: white;
+      padding: 1.5rem 0;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    }
+    
+    .card {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+      transition: transform 0.3s, box-shadow 0.3s;
+      margin-bottom: 1.5rem;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .card-header {
+      background-color: white;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      font-weight: 600;
+      padding: 1rem 1.5rem;
+      border-radius: 12px 12px 0 0 !important;
+    }
+    
+    .stats-card {
+      text-align: center;
+      padding: 1.25rem;
+    }
+    
+    .stats-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0.5rem 0;
+    }
+    
+    .stats-label {
+      font-size: 0.9rem;
+      color: #6c757d;
+      font-weight: 500;
+    }
+    
+    .traffic-table {
+      font-size: 0.85rem;
+    }
+    
+    .traffic-table th {
+      font-weight: 600;
+      background-color: #f8f9fa;
+    }
+    
+    .attack-row {
+      background-color: rgba(220, 53, 69, 0.08) !important;
+    }
+    
+    .normal-row {
+      background-color: rgba(25, 135, 84, 0.08) !important;
+    }
+    
+    .small-cell {
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .btn {
+      border-radius: 8px;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+    }
+    
+    .upload-area {
+      border: 2px dashed #0d6efd;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      background-color: rgba(13, 110, 253, 0.05);
+      margin-bottom: 1.5rem;
+    }
+    
+    .live-badge {
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    .protocol-badge {
+      font-size: 0.75rem;
+      padding: 0.35em 0.65em;
+      border-radius: 6px;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 250px;
+      width: 100%;
+    }
+    
+    .sidebar {
+      background-color: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      height: 100%;
+    }
+    
+    .sidebar-stats {
+      margin-bottom: 1.5rem;
+    }
+    
+    .sidebar-stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .sidebar-stat:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="#">
+        <i class="bi bi-shield-shaded me-2"></i>
+        <span class="fw-bold">Network Traffic Analyzer</span>
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link active" href="#"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#"><i class="bi bi-clock-history me-1"></i> History</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#"><i class="bi bi-gear me-1"></i> Settings</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="dashboard-header">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1 class="display-5 fw-bold">DDoS Attack Detection Dashboard</h1>
+          <p class="lead mb-0">Monitor and analyze network traffic in real-time</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+          <div class="btn-group">
+            <button id="startLive" class="btn btn-success" onclick="startLive()">
+              <i class="bi bi-play-circle me-1"></i> Start Live Monitoring
+            </button>
+            <button id="stopLive" class="btn btn-danger" onclick="stopLive()" style="display:none;">
+              <i class="bi bi-pause-circle me-1"></i> Stop
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <!-- Main Content -->
+      <div class="col-lg-9">
+        <!-- Statistics Cards -->
+        <div class="row">
+          <div class="col-md-4">
+            <div class="card stats-card">
+              <div class="stats-label">Total Packets</div>
+              <div class="stats-value text-primary" id="totalSeen">0</div>
+              <div class="text-muted">Since monitoring started</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card stats-card">
+              <div class="stats-label">Normal Packets</div>
+              <div class="stats-value text-success" id="normalsSeen">0</div>
+              <div class="text-muted" id="normalPercent">0% of traffic</div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card stats-card">
+              <div class="stats-label">Attack Packets</div>
+              <div class="stats-value text-danger" id="attacksSeen">0</div>
+              <div class="text-muted" id="attackPercent">0% of traffic</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Traffic Chart -->
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Traffic Analysis</h5>
+            <span class="badge bg-success live-badge" id="liveBadge">
+              <i class="bi bi-circle-fill me-1"></i> LIVE
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="trafficChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- File Upload -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Analyze Packet Capture</h5>
+          </div>
+          <div class="card-body">
+            <div class="upload-area">
+              <i class="bi bi-cloud-arrow-up display-4 text-primary mb-3"></i>
+              <h5>Upload CSV for analysis</h5>
+              <p class="text-muted">CSV must contain columns: Time, Source, Destination, Protocol, Length, ICMPv6 type, ICMPv6 checksum</p>
+              
+              <div class="row justify-content-center">
+                <div class="col-md-8">
+                  <input id="fileInput" type="file" class="form-control mb-3" accept=".csv">
+                  <div class="d-grid">
+                    <button class="btn btn-primary" onclick="uploadFile()">
+                      <i class="bi bi-search me-1"></i> Analyze File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Traffic Table -->
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent Network Packets</h5>
+            <div class="text-muted small" id="tableInfo">Showing 0 packets</div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive">
+              <table class="table table-hover traffic-table mb-0">
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Source</th>
+                    <th>Destination</th>
+                    <th>Protocol</th>
+                    <th>Length</th>
+                    <th>Type</th>
+                    <th>Prediction</th>
+                  </tr>
+                </thead>
+                <tbody id="trafficTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="col-lg-3">
+        <!-- Protocol Distribution -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Protocol Distribution</h5>
+          </div>
+          <div class="card-body">
+            <div class="chart-container">
+              <canvas id="protocolChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Traffic Summary -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Traffic Summary</h5>
+          </div>
+          <div class="card-body">
+            <div class="sidebar-stats">
+              <div class="sidebar-stat">
+                <span>ICMPv6 Packets</span>
+                <span class="fw-bold" id="ICMPv6Count">0</span>
+              </div>
+              <div class="sidebar-stat">
+                <span>Other Packets</span>
+                <span class="fw-bold" id="otherCount">0</span>
+              </div>
+ 
+            <div class="progress mb-2" style="height: 8px;">
+              <div class="progress-bar bg-success" role="progressbar" id="normalProgress" style="width: 100%"></div>
+            </div>
+            <div class="d-flex justify-content-between small">
+              <span>Normal: <span id="normalSideCount">0</span></span>
+              <span>Attack: <span id="attackSideCount">0</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">System Status</h5>
+          </div>
+          <div class="card-body">
+            <div class="d-flex align-items-center mb-3">
+              <div class="me-3">
+                <i class="bi bi-circle-fill text-success" id="statusIcon"></i>
+              </div>
+              <div>
+                <div class="fw-bold" id="statusText">Monitoring Active</div>
+                <div class="small text-muted" id="statusSubText">Receiving live data</div>
+              </div>
+            </div>
+            
+            <div class="sidebar-stat">
+              <span>Last Updated</span>
+              <span class="small" id="lastUpdated">Just now</span>
+            </div>
+            <div class="sidebar-stat">
+              <span>Packet Rate</span>
+              <span class="small" id="packetRate">0 p/s</span>
+            </div>
+            <div class="sidebar-stat">
+              <span>Detection Model</span>
+              <span class="small">Gradient Boosting</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-light mt-5 py-4">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-6">
+          <p class="mb-0">Developed by:</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+          <p class="mb-0"> Muhammad Areeb</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let mode = "idle";  
+    let liveInterval = null;
+    let packetHistory = [];
+    let lastUpdateTime = Date.now();
+    let packetCountSinceUpdate = 0;
+
+    // Initialize charts
+    const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+    const trafficChart = new Chart(trafficCtx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Attack Packets',
+            data: [],
+            borderColor: 'rgba(220, 53, 69, 1)',
+            backgroundColor: 'rgba(220, 53, 69, 0.1)',
+            tension: 0.3,
+            fill: true
+          },
+          {
+            label: 'Normal Packets',
+            data: [],
+            borderColor: 'rgba(25, 135, 84, 1)',
+            backgroundColor: 'rgba(25, 135, 84, 0.1)',
+            tension: 0.3,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          title: {
+            display: true,
+            text: 'Packet Traffic Over Time'
+          }
+        },
+        scales: {
+          x: {
+            display: true,
+            title: {
+              display: true,
+              text: 'Time'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Packet Count'
+            }
+          }
+        }
+      }
+    });
+
+    const protocolCtx = document.getElementById('protocolChart').getContext('2d');
+    const protocolChart = new Chart(protocolCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['ICMPv6', 'Other'],
+    datasets: [{
+      data: [0, 0], // initialize all to 0
+      backgroundColor: [
+        'rgba(220, 53, 69, 0.8)',    // ICMPv6 - Bright Red
+        'rgba(255, 206, 86, 0.8)'    // Other - Yellow
+      ],
+      borderWidth: 1
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'bottom',
+      }
+    }
+  }
+});
+
+
+    // Update stats and charts with live data
+    async function fetchLive() {
+      if (mode !== "live") return;
+      try {
+        const res = await fetch('/live');
+        const data = await res.json();
+        
+        // Update packet rate calculation
+        const now = Date.now();
+        const elapsedSeconds = (now - lastUpdateTime) / 1000;
+        const currentPacketRate = Math.round(packetCountSinceUpdate / elapsedSeconds);
+        document.getElementById('packetRate').textContent = `${currentPacketRate} p/s`;
+        
+        lastUpdateTime = now;
+        packetCountSinceUpdate = 0;
+        
+        // Update last updated timestamp
+        document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+        
+        const attacks = data.filter(d => d.Prediction === 'Attack').length;
+        const normals = data.filter(d => d.Prediction === 'Normal').length;
+        const ts = new Date().toLocaleTimeString();
+
+        // Update traffic chart
+        trafficChart.data.labels.push(ts);
+        trafficChart.data.datasets[0].data.push(attacks);
+        trafficChart.data.datasets[1].data.push(normals);
+        
+        if (trafficChart.data.labels.length > 15) {
+          trafficChart.data.labels.shift();
+          trafficChart.data.datasets.forEach(ds => ds.data.shift());
+        }
+        trafficChart.update('active');
+
+        // Update protocol distribution
+        updateProtocolChart(data);
+        
+        // Update table and stats
+        updateTable(data.slice().reverse().slice(0, 100));
+        updateStats(data, attacks, normals);
+
+      } catch (e) {
+        console.error('Error fetching live data:', e);
+        document.getElementById('statusIcon').classList.remove('text-success');
+        document.getElementById('statusIcon').classList.add('text-danger');
+        document.getElementById('statusText').textContent = 'Connection Error';
+        document.getElementById('statusSubText').textContent = 'Failed to fetch data';
+      }
+    }
+
+    function updateProtocolChart(data) {
+      const protocols = {
+        'ICMPv6': 0,
+        'Other': 0
+      };
+      
+      data.forEach(packet => {
+        const protocol = packet.Protocol || 'Other';
+        if (protocols.hasOwnProperty(protocol)) {
+          protocols[protocol]++;
+        } else {
+          protocols['Other']++;
+        }
+      });
+      
+      protocolChart.data.datasets[0].data = [
+        protocols['ICMPv6'],
+        protocols['Other']
+      ];
+      
+      protocolChart.update();
+      
+      // Update protocol counts in sidebar
+      document.getElementById('ICMPv6Count').textContent = protocols['ICMPv6'];
+      document.getElementById('otherCount').textContent = protocols['Other'];
+    }
+
+    function updateTable(records) {
+      const tbl = document.getElementById('trafficTable');
+      tbl.innerHTML = '';
+      
+      if (records.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="7" class="text-center py-4 text-muted">No packets to display</td>`;
+        tbl.appendChild(tr);
+        return;
+      }
+      
+      records.forEach(r => {
+        const tr = document.createElement('tr');
+        if (r.Prediction === 'Attack') {
+          tr.classList.add('attack-row');
+        } else if (r.Prediction === 'Normal') {
+          tr.classList.add('normal-row');
+        }
+        
+        // Format protocol with badge
+        const protocolBadge = `<span class="badge protocol-badge bg-info">${r.Protocol || 'N/A'}</span>`;
+        
+        // Format prediction with colored badge
+        let predictionBadge = '';
+        if (r.Prediction === 'Attack') {
+          predictionBadge = `<span class="badge protocol-badge bg-danger">Attack</span>`;
+        } else if (r.Prediction === 'Normal') {
+          predictionBadge = `<span class="badge protocol-badge bg-success">Normal</span>`;
+        } else {
+          predictionBadge = `<span class="badge protocol-badge bg-secondary">Unknown</span>`;
+        }
+        
+        tr.innerHTML = `
+          <td>${r.Time || 'N/A'}</td>
+          <td class="small-cell">${r.Source || 'N/A'}</td>
+          <td class="small-cell">${r.Destination || 'N/A'}</td>
+          <td>${protocolBadge}</td>
+          <td>${r.Length || 'N/A'}</td>
+          <td>${r['ICMPv6 type'] || 'N/A'}</td>
+          <td>${predictionBadge}</td>
+        `;
+        tbl.appendChild(tr);
+      });
+      
+      document.getElementById('tableInfo').textContent = `Showing ${Math.min(records.length, 100)} packets`;
+    }
+    
+    function updateStats(data, attacks, normals) {
+      const total = data.length;
+      const attackPercentage = total > 0 ? Math.round((attacks / total) * 100) : 0;
+      const normalPercentage = total > 0 ? Math.round((normals / total) * 100) : 0;
+      
+      document.getElementById('totalSeen').textContent = total.toLocaleString();
+      document.getElementById('attacksSeen').textContent = attacks.toLocaleString();
+      document.getElementById('normalsSeen').textContent = normals.toLocaleString();
+      
+      document.getElementById('attackPercent').textContent = `${attackPercentage}% of traffic`;
+      document.getElementById('normalPercent').textContent = `${normalPercentage}% of traffic`;
+      
+      document.getElementById('normalProgress').style.width = `${normalPercentage}%`;
+      document.getElementById('normalSideCount').textContent = normals.toLocaleString();
+      document.getElementById('attackSideCount').textContent = attacks.toLocaleString();
+      
+      // Update packet count for rate calculation
+      packetCountSinceUpdate += data.length - packetHistory.length;
+      packetHistory = data;
+    }
+
+    async function uploadFile() {
+      const f = document.getElementById('fileInput').files[0];
+      if (!f) {
+        showAlert('Please select a CSV file first.', 'warning');
+        return;
+      }
+      
+      showAlert('Analyzing file...', 'info');
+      
+      const fd = new FormData();
+      fd.append('file', f);
+      
+      try {
+        const res = await fetch('/predict', { method: 'POST', body: fd });
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
+        
+        const data = await res.json();
+        
+        stopLive();
+        mode = "csv";
+        document.getElementById('liveBadge').style.display = "none";
+        
+        // Update charts with file data
+        trafficChart.data.labels = ["CSV Analysis"];
+        trafficChart.data.datasets[0].data = [data.filter(d => d.Prediction === 'Attack').length];
+        trafficChart.data.datasets[1].data = [data.filter(d => d.Prediction === 'Normal').length];
+        trafficChart.update();
+        
+        updateProtocolChart(data);
+        updateTable(data.slice(0, 100));
+        
+        const attacks = data.filter(d => d.Prediction === 'Attack').length;
+        const normals = data.filter(d => d.Prediction === 'Normal').length;
+        updateStats(data, attacks, normals);
+        
+        showAlert('File analysis completed successfully.', 'success');
+        
+      } catch (error) {
+        console.error('Error:', error);
+        showAlert('Error analyzing file: ' + error.message, 'danger');
+      }
+    }
+
+    function startLive() {
+      mode = "live";
+      document.getElementById('startLive').style.display = "none";
+      document.getElementById('stopLive').style.display = "inline-block";
+      document.getElementById('liveBadge').style.display = "inline-block";
+      
+      document.getElementById('statusIcon').className = 'bi bi-circle-fill text-success';
+      document.getElementById('statusText').textContent = 'Monitoring Active';
+      document.getElementById('statusSubText').textContent = 'Receiving live data';
+      
+      // Reset chart for live data
+      trafficChart.data.labels = [];
+      trafficChart.data.datasets[0].data = [];
+      trafficChart.data.datasets[1].data = [];
+      trafficChart.update();
+      
+      if (!liveInterval) {
+        liveInterval = setInterval(fetchLive, 2000);
+        // Initial fetch
+        fetchLive();
+      }
+    }
+
+    function stopLive() {
+      mode = "idle";
+      if (liveInterval) {
+        clearInterval(liveInterval);
+        liveInterval = null;
+      }
+      document.getElementById('startLive').style.display = "inline-block";
+      document.getElementById('stopLive').style.display = "none";
+      document.getElementById('liveBadge').style.display = "none";
+      
+      document.getElementById('statusIcon').className = 'bi bi-circle-fill text-secondary';
+      document.getElementById('statusText').textContent = 'Monitoring Paused';
+      document.getElementById('statusSubText').textContent = 'Click start to resume';
+    }
+    
+    function showAlert(message, type) {
+      // Remove any existing alerts
+      const existingAlert = document.querySelector('.alert');
+      if (existingAlert) {
+        existingAlert.remove();
+      }
+      
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+      alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      `;
+      
+      document.querySelector('.container').prepend(alertDiv);
+      
+      // Auto dismiss after 5 seconds
+      setTimeout(() => {
+        if (alertDiv.parentNode) {
+          alertDiv.remove();
+        }
+      }, 5000);
+    }
+
+    // Initialize the dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set initial state
+      document.getElementById('stopLive').style.display = "none";
+      document.getElementById('liveBadge').style.display = "none";
+      
+      
+      
+      updateTable([]);
+    });
+  </script>
+</body>
+</html>
